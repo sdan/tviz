@@ -1,4 +1,7 @@
 <h1 align="center">tviz</h1>
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/58bb9adb-3866-40ad-a0fb-1b265c638743" alt="tviz dashboard" width="80%" />
+</div>
 
 tviz is a local dashboard for visualizing RL training runs. Similar to wandb, you add a logger to your training loop. Metrics, rollouts, and trajectories are stored in a local SQLite database and displayed in real-time.
 
