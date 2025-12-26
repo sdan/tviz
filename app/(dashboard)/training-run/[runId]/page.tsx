@@ -12,6 +12,8 @@ import {
 import { Map, Marker } from "pigeon-maps";
 import { useLiveTraining } from "@/hooks/useLiveTraining";
 import { useReplayTraining } from "@/hooks/useReplayTraining";
+import { TextRolloutCard } from "@/lib/plugins/text/TextRolloutCard";
+import { TextRolloutView } from "@/lib/plugins/text/TextRolloutView";
 import { Button } from "@/components/ui/button";
 import {
   LineChart,
@@ -60,6 +62,35 @@ function RolloutModal({
       ? [rollout.gt_lat, rollout.gt_lon]
       : [0, 0];
 
+  // For text modality, use the TextRolloutView component
+  if (!isVision) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-semibold">Text Rollout</span>
+                <Badge variant="outline" className="text-xs">Step {rollout.step}</Badge>
+                <Badge variant="outline" className="text-xs">Group {rollout.group_idx}</Badge>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <TextRolloutView
+            rollout={rollout}
+            trajectories={rollout.trajectories.map(t => ({
+              trajectory_idx: t.trajectory_idx,
+              reward: t.reward,
+              output_text: t.output_text ?? undefined,
+              logprobs: t.logprobs ? JSON.parse(t.logprobs) : undefined,
+            }))}
+          />
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Vision modality - existing layout
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -67,7 +98,7 @@ function RolloutModal({
           <DialogTitle>
             <div className="flex items-center gap-2">
               <span className="text-xl font-semibold">
-                {isVision ? `${rollout.gt_city || "Unknown"}, ${rollout.gt_country || "Unknown"}` : "Text Rollout"}
+                {`${rollout.gt_city || "Unknown"}, ${rollout.gt_country || "Unknown"}`}
               </span>
               <Badge variant="outline" className="text-xs">Step {rollout.step}</Badge>
               <Badge variant="outline" className="text-xs">Group {rollout.group_idx}</Badge>
@@ -76,27 +107,20 @@ function RolloutModal({
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-6 mt-2">
-          {/* Left: Image or Prompt */}
+          {/* Left: Image */}
           <div className="space-y-4">
-            {isVision && rollout.image_path ? (
-              <div className="relative aspect-[4/3] bg-muted rounded-lg overflow-hidden">
-                <img
-                  src={rollout.image_path}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-                {rollout.gt_lat && rollout.gt_lon && (
-                  <div className="absolute bottom-3 left-3 bg-black/70 text-white text-sm px-3 py-1.5 rounded">
-                    Ground Truth: {rollout.gt_lat.toFixed(4)}, {rollout.gt_lon.toFixed(4)}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="aspect-[4/3] bg-muted rounded-lg p-4 overflow-auto">
-                <div className="text-xs text-muted-foreground mb-2">Prompt:</div>
-                <pre className="text-sm font-mono whitespace-pre-wrap">{rollout.prompt_text || "N/A"}</pre>
-              </div>
-            )}
+            <div className="relative aspect-[4/3] bg-muted rounded-lg overflow-hidden">
+              <img
+                src={rollout.image_path!}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+              {rollout.gt_lat && rollout.gt_lon && (
+                <div className="absolute bottom-3 left-3 bg-black/70 text-white text-sm px-3 py-1.5 rounded">
+                  Ground Truth: {rollout.gt_lat.toFixed(4)}, {rollout.gt_lon.toFixed(4)}
+                </div>
+              )}
+            </div>
 
             {/* Trajectory selector */}
             <div>
@@ -122,9 +146,9 @@ function RolloutModal({
             </div>
           </div>
 
-          {/* Right: Map (vision) or Output (text) + Details */}
+          {/* Right: Map + Details */}
           <div className="space-y-4">
-            {isVision && rollout.gt_lat && rollout.gt_lon ? (
+            {rollout.gt_lat && rollout.gt_lon && (
               <div className="h-[320px] rounded-lg overflow-hidden border border-border">
                 <Map center={mapCenter} zoom={2} height={320}>
                   <Marker anchor={[rollout.gt_lat, rollout.gt_lon]} color="#ff3b30" />
@@ -140,25 +164,18 @@ function RolloutModal({
                     ))}
                 </Map>
               </div>
-            ) : (
-              <div className="h-[320px] bg-muted rounded-lg p-4 overflow-auto border border-border">
-                <div className="text-xs text-muted-foreground mb-2">Model Output:</div>
-                <pre className="text-sm font-mono whitespace-pre-wrap">{trajectory?.output_text || "N/A"}</pre>
-              </div>
             )}
 
             {/* Selected trajectory details */}
             {trajectory && (
               <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  {isVision && (
-                    <div>
-                      <span className="text-muted-foreground">Distance: </span>
-                      <span className="font-mono font-bold" style={{ color: distanceColor(trajectory.distance_km) }}>
-                        {trajectory.distance_km?.toFixed(1) ?? "N/A"} km
-                      </span>
-                    </div>
-                  )}
+                  <div>
+                    <span className="text-muted-foreground">Distance: </span>
+                    <span className="font-mono font-bold" style={{ color: distanceColor(trajectory.distance_km) }}>
+                      {trajectory.distance_km?.toFixed(1) ?? "N/A"} km
+                    </span>
+                  </div>
                   <div>
                     <span className="text-muted-foreground">Reward: </span>
                     <span className="font-mono font-bold" style={{ color: rewardColor(trajectory.reward) }}>
@@ -208,39 +225,36 @@ function RolloutCard({ rollout, onClick }: { rollout: RolloutWithTrajectories; o
   const trajectory = rollout.trajectories[idx];
   const isVision = rollout.image_path !== null;
 
+  // Use TextRolloutCard for text modality
+  if (!isVision) {
+    return <TextRolloutCard rollout={rollout} onClick={onClick} />;
+  }
+
+  // Vision modality - existing layout
   return (
     <Card
       className="overflow-hidden cursor-pointer transition-all hover:ring-2 hover:ring-primary/50 hover:shadow-lg"
       onClick={onClick}
     >
       <div className="grid grid-cols-2 gap-0">
-        {isVision ? (
-          <>
-            <div className="relative aspect-[4/3] bg-muted">
-              <img src={rollout.image_path!} alt="" className="w-full h-full object-cover" />
-              <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                {rollout.gt_city || "Unknown"}, {rollout.gt_country || "Unknown"}
-              </div>
-            </div>
-            <div className="aspect-[4/3]">
-              {rollout.gt_lat && rollout.gt_lon && (
-                <Map center={[rollout.gt_lat, rollout.gt_lon]} zoom={3} height={200}>
-                  <Marker anchor={[rollout.gt_lat, rollout.gt_lon]} color="#ff3b30" />
-                  {rollout.trajectories
-                    .filter((t) => t.pred_lat && t.pred_lon)
-                    .map((t) => (
-                      <Marker key={t.id} anchor={[t.pred_lat!, t.pred_lon!]} color={distanceColor(t.distance_km)} />
-                    ))}
-                </Map>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="col-span-2 aspect-[8/3] bg-muted p-3 overflow-hidden">
-            <div className="text-xs text-muted-foreground mb-1">Prompt:</div>
-            <pre className="text-xs font-mono line-clamp-4">{rollout.prompt_text || "N/A"}</pre>
+        <div className="relative aspect-[4/3] bg-muted">
+          <img src={rollout.image_path!} alt="" className="w-full h-full object-cover" />
+          <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+            {rollout.gt_city || "Unknown"}, {rollout.gt_country || "Unknown"}
           </div>
-        )}
+        </div>
+        <div className="aspect-[4/3]">
+          {rollout.gt_lat && rollout.gt_lon && (
+            <Map center={[rollout.gt_lat, rollout.gt_lon]} zoom={3} height={200}>
+              <Marker anchor={[rollout.gt_lat, rollout.gt_lon]} color="#ff3b30" />
+              {rollout.trajectories
+                .filter((t) => t.pred_lat && t.pred_lon)
+                .map((t) => (
+                  <Marker key={t.id} anchor={[t.pred_lat!, t.pred_lon!]} color={distanceColor(t.distance_km)} />
+                ))}
+            </Map>
+          )}
+        </div>
       </div>
       <CardContent className="p-3 bg-muted/50" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-wrap gap-1 mb-2">
@@ -257,12 +271,10 @@ function RolloutCard({ rollout, onClick }: { rollout: RolloutWithTrajectories; o
         </div>
         {trajectory && (
           <div className="text-xs font-mono grid grid-cols-3 gap-2">
-            {isVision && (
-              <div>
-                <span className="text-muted-foreground">Distance: </span>
-                <span style={{ color: distanceColor(trajectory.distance_km) }}>{trajectory.distance_km?.toFixed(0) ?? "N/A"} km</span>
-              </div>
-            )}
+            <div>
+              <span className="text-muted-foreground">Distance: </span>
+              <span style={{ color: distanceColor(trajectory.distance_km) }}>{trajectory.distance_km?.toFixed(0) ?? "N/A"} km</span>
+            </div>
             <div>
               <span className="text-muted-foreground">Reward: </span>
               <span style={{ color: rewardColor(trajectory.reward) }}>{trajectory.reward.toFixed(4)}</span>
