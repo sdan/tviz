@@ -1,0 +1,38 @@
+{
+  "name": "tviz",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun next dev -p 3001",
+    "build": "bun next build",
+    "start": "bun next start -p 3001"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-slot": "^1.2.4",
+    "autoprefixer": "^10.4.23",
+    "better-sqlite3": "^12.5.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.561.0",
+    "next": "^14.0.0",
+    "pigeon-maps": "^0.22.1",
+    "postcss": "^8.5.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-is": "^18.2.0",
+    "react-leaflet": "^4.2.1",
+    "recharts": "^3.5.1",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "3.4.17",
+    "tailwindcss-animate": "1.0.7"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/leaflet": "^1.9.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}
