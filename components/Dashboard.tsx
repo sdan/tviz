@@ -339,7 +339,7 @@ logger.close()`}
                 <CardDescription>Token and timing averages</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <div className="text-xs text-muted-foreground">Avg tokens / turn</div>
                     <div className="font-mono">{formatMetric(stats.perfStats.avgTokensPerTurn, 2)}</div>
@@ -349,6 +349,14 @@ logger.close()`}
                     <div className="font-mono">
                       {stats.perfStats.totalActionTokens !== null
                         ? formatNumber(stats.perfStats.totalActionTokens)
+                        : "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Total turns</div>
+                    <div className="font-mono">
+                      {stats.perfStats.totalTurns !== null
+                        ? formatNumber(stats.perfStats.totalTurns)
                         : "—"}
                     </div>
                   </div>

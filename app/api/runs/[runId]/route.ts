@@ -18,8 +18,14 @@ export async function GET(
           step,
           created_at as timestamp,
           loss,
-          reward_mean as mean_reward,
-          extras as metrics
+          reward_mean,
+          ac_tokens_per_turn,
+          ob_tokens_per_turn,
+          total_ac_tokens,
+          total_turns,
+          sampling_time_mean,
+          time_total,
+          extras
         FROM steps
         WHERE run_id = ?
         ORDER BY step

@@ -135,28 +135,13 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* User section */}
-      <div className="border-t border-border p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground">
-            U
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">User</p>
-            <p className="text-xs text-muted-foreground truncate">
-              user@example.com
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Footer */}
       <div className="px-4 py-4 text-center text-xs text-muted-foreground leading-relaxed">
-        <a href="https://github.com/thinkingmachines/tviz" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+        <a href="https://github.com/sdan/tviz" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
           Open source
         </a>
         {" · "}
-        <a href="https://tinker-docs.thinkingmachines.ai/" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+        <a href="https://github.com/sdan/tviz" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
           Docs
         </a>
       </div>

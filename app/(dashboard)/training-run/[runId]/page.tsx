@@ -685,7 +685,7 @@ export default function TrainingRunPage() {
       <header className="flex items-center justify-between pb-3 border-b border-border">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-semibold font-mono">{decodedRunId}</h1>
-          <Badge variant={connected ? "green" : isEnded ? "secondary" : "destructive"}>
+          <Badge variant={isEnded ? "secondary" : connected ? "green" : "destructive"}>
             {isReplayMode
               ? (replay.isReplaying ? "Replaying" : "Done")
               : (isEnded ? "Ended" : (connected ? "Live" : "Disconnected"))}
@@ -696,11 +696,11 @@ export default function TrainingRunPage() {
 
         <div className="flex items-center gap-4">
           {!isReplayMode ? (
-            <Button variant="outline" size="sm" onClick={() => { setIsReplayMode(true); replay.startReplay(200); }}>
+            <Button variant="primary" size="sm" onClick={() => { setIsReplayMode(true); replay.startReplay(200); }}>
               ▶ Replay run
             </Button>
           ) : (
-            <Button variant="outline" size="sm" onClick={() => { setIsReplayMode(false); replay.stopReplay(); }}>
+            <Button variant="danger" size="sm" onClick={() => { setIsReplayMode(false); replay.stopReplay(); }}>
               ■ Stop replay
             </Button>
           )}
@@ -763,6 +763,86 @@ export default function TrainingRunPage() {
           </ResponsiveContainer>
         </Card>
       </div>
+
+      {/* Performance Charts - only show if we have actual timing data */}
+      {steps.filter(s => typeof s.sampling_time_mean === 'number' || typeof s.time_total === 'number').length > 0 ? (
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground">Performance Metrics</h2>
+          <div className="grid grid-cols-2 gap-4">
+            {steps.some(s => typeof s.ac_tokens_per_turn === 'number') && (
+              <Card className="p-4">
+                <div className="text-sm font-medium mb-2">Tokens per Turn</div>
+                <ResponsiveContainer width="100%" height={140}>
+                  <AreaChart data={steps.map(s => ({ step: s.step, value: s.ac_tokens_per_turn }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                    <XAxis dataKey="step" stroke="#888" fontSize={10} />
+                    <YAxis stroke="#888" fontSize={10} />
+                    <Tooltip
+                      contentStyle={{ background: "#1a1a1a", border: "1px solid #333", fontSize: 12 }}
+                      formatter={(value) => typeof value === "number" ? value.toFixed(2) : value}
+                    />
+                    <Area type="monotone" dataKey="value" stroke="#a855f7" fill="#a855f733" strokeWidth={2} name="tokens/turn" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Card>
+            )}
+
+            {steps.some(s => typeof s.total_ac_tokens === 'number') && (
+              <Card className="p-4">
+                <div className="text-sm font-medium mb-2">Total Action Tokens</div>
+                <ResponsiveContainer width="100%" height={140}>
+                  <AreaChart data={steps.map(s => ({ step: s.step, value: s.total_ac_tokens }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                    <XAxis dataKey="step" stroke="#888" fontSize={10} />
+                    <YAxis stroke="#888" fontSize={10} />
+                    <Tooltip
+                      contentStyle={{ background: "#1a1a1a", border: "1px solid #333", fontSize: 12 }}
+                      formatter={(value) => typeof value === "number" ? value.toLocaleString() : value}
+                    />
+                    <Area type="monotone" dataKey="value" stroke="#f59e0b" fill="#f59e0b33" strokeWidth={2} name="tokens" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Card>
+            )}
+
+            {steps.some(s => typeof s.sampling_time_mean === 'number') && (
+              <Card className="p-4">
+                <div className="text-sm font-medium mb-2">Sampling Time (s)</div>
+                <ResponsiveContainer width="100%" height={140}>
+                  <AreaChart data={steps.map(s => ({ step: s.step, value: s.sampling_time_mean }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                    <XAxis dataKey="step" stroke="#888" fontSize={10} />
+                    <YAxis stroke="#888" fontSize={10} />
+                    <Tooltip
+                      contentStyle={{ background: "#1a1a1a", border: "1px solid #333", fontSize: 12 }}
+                      formatter={(value) => typeof value === "number" ? `${value.toFixed(2)}s` : value}
+                    />
+                    <Area type="monotone" dataKey="value" stroke="#14b8a6" fill="#14b8a633" strokeWidth={2} name="time" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Card>
+            )}
+
+            {steps.some(s => typeof s.time_total === 'number') && (
+              <Card className="p-4">
+                <div className="text-sm font-medium mb-2">Step Time (s)</div>
+                <ResponsiveContainer width="100%" height={140}>
+                  <AreaChart data={steps.map(s => ({ step: s.step, value: s.time_total }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                    <XAxis dataKey="step" stroke="#888" fontSize={10} />
+                    <YAxis stroke="#888" fontSize={10} />
+                    <Tooltip
+                      contentStyle={{ background: "#1a1a1a", border: "1px solid #333", fontSize: 12 }}
+                      formatter={(value) => typeof value === "number" ? `${value.toFixed(2)}s` : value}
+                    />
+                    <Area type="monotone" dataKey="value" stroke="#ec4899" fill="#ec489933" strokeWidth={2} name="time" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Card>
+            )}
+          </div>
+        </div>
+      ) : null}
 
       {/* Groups by Step */}
       <div className="space-y-3">

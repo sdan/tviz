@@ -55,6 +55,8 @@ export async function GET(request: Request) {
               ob_tokens_per_turn,
               total_ac_tokens,
               total_turns,
+              sampling_time_mean,
+              time_total,
               frac_mixed,
               frac_all_good,
               frac_all_bad,
