@@ -1,6 +1,6 @@
 <h1 align="center">tviz</h1>
 
-Training visualization for Tinker. Watch your RL runs in real-time.
+tviz is a local dashboard for visualizing RL training runs. Similar to wandb, you add a logger to your training loop. Metrics, rollouts, and trajectories are stored in a local SQLite database and displayed in real-time.
 
 ## Installation
 
