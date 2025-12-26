@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "bun next dev -p 3001",
+    "dev": "bun next dev -p 3003",
     "build": "bun next build",
-    "start": "bun next start -p 3001"
+    "start": "bun next start -p 3003"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

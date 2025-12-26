@@ -78,7 +78,7 @@ export function TextRolloutCard({ rollout, onClick }: TextRolloutCardProps) {
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-3">
             <span className="text-muted-foreground">
-              {rollout.trajectories.length} trajectories
+              {rollout.trajectories.length} rollouts
             </span>
           </div>
           <div className="flex items-center gap-3 font-mono">

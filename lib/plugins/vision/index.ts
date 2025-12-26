@@ -1,9 +1,7 @@
 // Vision modality plugin for tviz
 // Provides VLM-specific visualization components (geolocation, maps, etc.)
 
-export { default as GeoGuessingRLViz } from "./GeoGuessingRLViz";
 export { default as GeoRewardMap } from "./GeoRewardMap";
-export { default as GeoPolicyPrediction } from "./GeoPolicyPrediction";
 
 // Vision modality types
 export interface VisionObservation {

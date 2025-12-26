@@ -13,7 +13,7 @@ pip install tviz
 ```python
 from tviz import TvizLogger
 
-logger = TvizLogger("./tviz.db", run_name="math_rl")
+logger = TvizLogger(run_name="math_rl")
 logger.log_hparams(config)
 
 for step in range(1000):
@@ -28,12 +28,19 @@ logger.close()
 ```python
 from tinker_cookbook.utils.ml_log import setup_logging
 from tviz import TvizLogger
+from tviz.adapters.tinker import from_tinker_batch
 
-logger = setup_logging(log_dir, wandb_project="my_project", config=config)
-logger.loggers.append(TvizLogger("./tviz.db", run_name="math_rl"))
+# Add TvizLogger to the multiplex logger
+ml_logger = setup_logging(log_dir, wandb_project="my_project", config=config)
+tviz_logger = TvizLogger(run_name="math_rl")
+ml_logger.loggers.append(tviz_logger)
 
-# training loop - tviz receives all log_metrics calls automatically
-logger.log_metrics({"reward": mean_reward}, step=i)
+# In training loop - after rollouts:
+rollouts = from_tinker_batch(trajectory_groups_P, tokenizer=tokenizer)
+tviz_logger.log_rollouts(rollouts, step=i_batch)
+
+# Metrics are logged automatically via multiplex
+ml_logger.log_metrics(metrics, step=i_batch)
 ```
 
 ## Dashboard
@@ -42,7 +49,10 @@ logger.log_metrics({"reward": mean_reward}, step=i)
 cd tviz && bun install && bun dev
 ```
 
-Open `http://localhost:3000` to view training runs.
+Open `http://localhost:3003` to view training runs.
+
+By default, tviz stores data in `~/.tviz/tviz.db`. You can override this
+with `TVIZ_DB_PATH`.
 
 ## Modalities
 

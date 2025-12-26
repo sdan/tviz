@@ -55,7 +55,7 @@ export function TextRolloutView({ rollout, trajectories }: TextRolloutViewProps)
       {/* Stats bar */}
       <div className="flex items-center gap-4 text-sm">
         <div className="flex items-center gap-1">
-          <span className="text-muted-foreground">Trajectories:</span>
+          <span className="text-muted-foreground">Rollouts:</span>
           <span className="font-semibold">{trajectories.length}</span>
         </div>
         <div className="flex items-center gap-1">
@@ -79,7 +79,7 @@ export function TextRolloutView({ rollout, trajectories }: TextRolloutViewProps)
       {/* Trajectories list */}
       <div className="space-y-2">
         <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Completions (ranked by reward)
+          Rollouts (ranked by reward)
         </div>
         {sorted.map((traj, rank) => (
           <TextTrajectoryCard

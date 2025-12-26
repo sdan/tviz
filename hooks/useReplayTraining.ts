@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { Step, RolloutWithTrajectories } from "@/lib/db";
 
 export function useReplayTraining(runId: string | null) {
@@ -9,6 +9,7 @@ export function useReplayTraining(runId: string | null) {
   const [isReplaying, setIsReplaying] = useState(false);
   const [replayProgress, setReplayProgress] = useState(0);
   const [totalSteps, setTotalSteps] = useState(0);
+  const seenRolloutIdsRef = useRef<Set<number>>(new Set());
 
   const startReplay = useCallback(
     (delay: number = 800) => {
@@ -18,6 +19,7 @@ export function useReplayTraining(runId: string | null) {
       setSteps([]);
       setRollouts([]);
       setReplayProgress(0);
+      seenRolloutIdsRef.current = new Set();
 
       const eventSource = new EventSource(
         `/api/replay/stream?run_id=${runId}&delay=${delay}`
@@ -32,7 +34,17 @@ export function useReplayTraining(runId: string | null) {
           setSteps(data);
           setReplayProgress(data.length);
         } else if (type === "rollouts") {
-          setRollouts(data);
+          setRollouts((prev) => {
+            const next = [...prev];
+            const seen = seenRolloutIdsRef.current;
+            for (const rollout of data as RolloutWithTrajectories[]) {
+              if (!seen.has(rollout.id)) {
+                next.push(rollout);
+                seen.add(rollout.id);
+              }
+            }
+            return next;
+          });
         } else if (type === "replay_end") {
           setIsReplaying(false);
           eventSource.close();

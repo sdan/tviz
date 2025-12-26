@@ -1,7 +1,11 @@
 import Database from "better-sqlite3";
+import os from "os";
 import path from "path";
 
-const DB_PATH = path.join(process.cwd(), "tviz.db");
+const envDbPath = process.env.TVIZ_DB_PATH;
+const DB_PATH = envDbPath && envDbPath.length > 0
+  ? envDbPath
+  : path.join(os.homedir(), ".tviz", "tviz.db");
 
 export function getDb() {
   return new Database(DB_PATH, { readonly: true });
@@ -28,11 +32,27 @@ export interface Step {
   run_id: string;
   step: number;
   timestamp: string;
-  // Core metrics (always present)
+  // Core metrics
   loss: number | null;
-  mean_reward: number | null;
-  // Optional metrics stored as JSON
-  metrics: string | null; // JSON object for extensible metrics
+  reward_mean: number | null;
+  reward_std: number | null;
+  kl_divergence: number | null;
+  entropy: number | null;
+  learning_rate: number | null;
+  // Token metrics (tinker-cookbook)
+  ac_tokens_per_turn: number | null;
+  ob_tokens_per_turn: number | null;
+  total_ac_tokens: number | null;
+  total_turns: number | null;
+  // Timing metrics (tinker-cookbook)
+  sampling_time_mean: number | null;
+  time_total: number | null;
+  // Group analysis metrics (GRPO)
+  frac_mixed: number | null;
+  frac_all_good: number | null;
+  frac_all_bad: number | null;
+  // Extensible metrics stored as JSON
+  extras: string | null; // JSON object for additional metrics
 }
 
 // =============================================================================
@@ -53,6 +73,8 @@ export interface Rollout {
   gt_country: string | null;
   // Text-specific (null for vision modality)
   prompt_text: string | null;
+  mean_reward: number | null;
+  best_reward: number | null;
   // Group-level metrics
   group_metrics: string | null; // JSON object
 }
@@ -81,6 +103,7 @@ export interface Trajectory {
   // Validation
   format_valid: number; // 0 or 1
   // Extensible metrics
+  step_rewards: string | null; // JSON array or object
   metrics: string | null; // JSON object
 }
 

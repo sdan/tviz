@@ -6,6 +6,7 @@ added to MultiplexLogger alongside WandbLogger, NeptuneLogger, etc.
 """
 
 import json
+import os
 import sqlite3
 import uuid
 from pathlib import Path
@@ -19,11 +20,11 @@ class TvizLogger:
     Compatible with tinker-cookbook's Logger interface. Add to MultiplexLogger:
 
         logger = setup_logging(...)
-        logger.loggers.append(TvizLogger("./tviz.db"))
+        logger.loggers.append(TvizLogger())
 
     Or use standalone:
 
-        logger = TvizLogger("./tviz.db", run_name="math_rl")
+        logger = TvizLogger(run_name="math_rl")
         logger.log_metrics({"reward": 0.5}, step=i)
         logger.log_rollouts(rollouts, step=i)
         logger.close()
@@ -31,11 +32,15 @@ class TvizLogger:
 
     def __init__(
         self,
-        db_path: str = "tviz.db",
+        db_path: Optional[str] = None,
         run_name: Optional[str] = None,
         modality: str = "text",
     ):
-        self.db_path = Path(db_path)
+        env_db_path = os.environ.get("TVIZ_DB_PATH")
+        default_db_path = Path.home() / ".tviz" / "tviz.db"
+        chosen_path = db_path or env_db_path or str(default_db_path)
+        self.db_path = Path(chosen_path)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.run_id: str = str(uuid.uuid4())[:8]
         self.run_name = run_name or self.run_id
         self.modality = modality
@@ -72,6 +77,17 @@ class TvizLogger:
                 kl_divergence REAL,
                 entropy REAL,
                 learning_rate REAL,
+                -- Token metrics (from tinker-cookbook)
+                ac_tokens_per_turn REAL,
+                ob_tokens_per_turn REAL,
+                total_ac_tokens INTEGER,
+                total_turns INTEGER,
+                sampling_time_mean REAL,
+                time_total REAL,
+                -- Group analysis metrics
+                frac_mixed REAL,
+                frac_all_good REAL,
+                frac_all_bad REAL,
                 extras TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (run_id) REFERENCES runs(id),
@@ -117,7 +133,20 @@ class TvizLogger:
             CREATE INDEX IF NOT EXISTS idx_rollouts_step ON rollouts(run_id, step);
             CREATE INDEX IF NOT EXISTS idx_trajectories_rollout ON trajectories(rollout_id);
         """)
+        self._ensure_step_columns(conn)
         conn.commit()
+
+    def _ensure_step_columns(self, conn: sqlite3.Connection) -> None:
+        columns = [
+            "sampling_time_mean REAL",
+            "time_total REAL",
+        ]
+        for column_def in columns:
+            try:
+                conn.execute(f"ALTER TABLE steps ADD COLUMN {column_def}")
+            except sqlite3.OperationalError as exc:
+                if "duplicate column name" not in str(exc):
+                    raise
 
     # -------------------------------------------------------------------------
     # Logger interface (tinker-cookbook compatible)
@@ -146,21 +175,50 @@ class TvizLogger:
         if step is None:
             return
 
-        # Extract known columns
+        # Extract known columns (support both flat and nested "env/all/" prefixed keys)
         data = dict(metrics)
-        reward_mean = data.pop("reward_mean", data.pop("reward", None))
-        reward_std = data.pop("reward_std", None)
-        loss = data.pop("loss", None)
-        kl_divergence = data.pop("kl_divergence", data.pop("kl", data.pop("kl_sample_train", None)))
-        entropy = data.pop("entropy", None)
-        learning_rate = data.pop("learning_rate", data.pop("lr", None))
+
+        def pop_metric(*keys: str) -> Optional[float]:
+            """Pop first matching key, supporting nested prefixes."""
+            for key in keys:
+                if key in data:
+                    return data.pop(key)
+                # Also check with common prefixes
+                for prefix in ["env/all/", "optim/", "by_group/"]:
+                    prefixed = f"{prefix}{key}"
+                    if prefixed in data:
+                        return data.pop(prefixed)
+            return None
+
+        reward_mean = pop_metric("reward_mean", "reward", "reward/total")
+        reward_std = pop_metric("reward_std")
+        loss = pop_metric("loss")
+        kl_divergence = pop_metric("kl_divergence", "kl", "kl_sample_train", "kl_sample_train_v1")
+        entropy = pop_metric("entropy")
+        learning_rate = pop_metric("learning_rate", "lr")
+
+        # Token metrics (tinker-cookbook)
+        ac_tokens_per_turn = pop_metric("ac_tokens_per_turn")
+        ob_tokens_per_turn = pop_metric("ob_tokens_per_turn")
+        total_ac_tokens = pop_metric("total_ac_tokens")
+        total_turns = pop_metric("total_turns")
+        sampling_time_mean = pop_metric("time/sampling_time_mean", "sampling_time_mean")
+        time_total = pop_metric("time/total", "time_total")
+
+        # Group analysis metrics (tinker-cookbook GRPO)
+        frac_mixed = pop_metric("frac_mixed")
+        frac_all_good = pop_metric("frac_all_good")
+        frac_all_bad = pop_metric("frac_all_bad")
 
         conn = self._get_conn()
         conn.execute(
             """
             INSERT OR REPLACE INTO steps
-            (run_id, step, reward_mean, reward_std, loss, kl_divergence, entropy, learning_rate, extras)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (run_id, step, reward_mean, reward_std, loss, kl_divergence, entropy, learning_rate,
+             ac_tokens_per_turn, ob_tokens_per_turn, total_ac_tokens, total_turns,
+             sampling_time_mean, time_total,
+             frac_mixed, frac_all_good, frac_all_bad, extras)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 self.run_id,
@@ -171,6 +229,15 @@ class TvizLogger:
                 kl_divergence,
                 entropy,
                 learning_rate,
+                ac_tokens_per_turn,
+                ob_tokens_per_turn,
+                int(total_ac_tokens) if total_ac_tokens else None,
+                int(total_turns) if total_turns else None,
+                sampling_time_mean,
+                time_total,
+                frac_mixed,
+                frac_all_good,
+                frac_all_bad,
                 json.dumps(data) if data else None,
             ),
         )
@@ -262,4 +329,4 @@ class TvizLogger:
 
     def get_logger_url(self) -> Optional[str]:
         """Return URL to view this run (local dashboard)."""
-        return f"http://localhost:3000/training-run/{self.run_id}"
+        return f"http://localhost:3003/training-run/{self.run_id}"
