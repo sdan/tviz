@@ -11,25 +11,29 @@ pip install tviz
 ## Usage
 
 ```python
-from tviz import tviz_sweep
+from tviz import TvizLogger
 
-with tviz_sweep("math_rl_exp", config={"lr": 1e-4}) as client:
-    for step in range(1000):
-        client.log_step(step, {"reward_mean": 0.5, "loss": 0.1})
-        client.log_rollout(step, rollouts)
+logger = TvizLogger("./tviz.db", run_name="math_rl")
+logger.log_hparams(config)
+
+for step in range(1000):
+    logger.log_metrics({"reward": 0.5, "loss": 0.1}, step=step)
+    logger.log_rollouts(rollouts, step=step)
+
+logger.close()
 ```
 
 ### With Tinker Cookbook
 
 ```python
-from tviz import TvizClient
-from tviz.adapters.tinker import from_tinker_batch
+from tinker_cookbook.utils.ml_log import setup_logging
+from tviz import TvizLogger
 
-client = TvizClient()
-client.start_run("math_rl", config)
+logger = setup_logging(log_dir, wandb_project="my_project", config=config)
+logger.loggers.append(TvizLogger("./tviz.db", run_name="math_rl"))
 
-# In training loop:
-client.log_rollout(i_batch, from_tinker_batch(trajectory_groups))
+# training loop - tviz receives all log_metrics calls automatically
+logger.log_metrics({"reward": mean_reward}, step=i)
 ```
 
 ## Dashboard
@@ -48,4 +52,3 @@ Open `http://localhost:3000` to view training runs.
 ## License
 
 MIT
-
