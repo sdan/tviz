@@ -6,7 +6,7 @@ const nextConfig = {
   reactStrictMode: true,
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
   outputFileTracingIncludes: {
-    "/api/**/*": ["./data/**/*"],
+    "/api/**/*": ["./public/tviz_demo.db"],
   },
 };
 

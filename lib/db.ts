@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import path from "path";
 import os from "os";
 
-// Default: ~/.tviz/tviz.db — override with TVIZ_DB_PATH env var
+// Default: ~/.tviz/tviz.db — override with TVIZ_DB_PATH
 const DB_PATH = process.env.TVIZ_DB_PATH || path.join(os.homedir(), ".tviz", "tviz.db");
 
 export function getDb() {

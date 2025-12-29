@@ -53,7 +53,9 @@ export async function GET(
 
     return NextResponse.json({ run, steps, stepSummaries });
   } catch (error) {
-    console.error("Run API error:", error);
-    return NextResponse.json({ error: "Database error" }, { status: 500 });
+    const fs = require("fs");
+    let taskFiles: string[] = [];
+    try { taskFiles = fs.readdirSync("/var/task").slice(0, 30); } catch {}
+    return NextResponse.json({ error: String(error), taskFiles, cwd: process.cwd() }, { status: 500 });
   }
 }
