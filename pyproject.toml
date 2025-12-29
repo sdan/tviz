@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tviz"
-version = "0.2.2"
+version = "0.2.3"
 description = "Local dashboard for visualizing RL training runs"
 readme = "README.md"
 license = "MIT"
