@@ -15,6 +15,7 @@ function getDbPath(): string {
 const DB_PATH = getDbPath();
 
 export function getDb() {
+  console.log("DB_PATH:", DB_PATH);
   return new Database(DB_PATH, { readonly: true });
 }
 
