@@ -5,6 +5,9 @@ import rehypePrettyCode from "rehype-pretty-code";
 const nextConfig = {
   reactStrictMode: true,
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./data/**/*"],
+  },
 };
 
 const withMDX = createMDX({
