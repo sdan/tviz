@@ -5,13 +5,19 @@
 
 tviz is a local dashboard for visualizing RL training runs with [Tinker](https://thinkingmachines.ai/tinker). Similar to wandb, you add a logger to your training loop. Metrics, rollouts, and trajectories are stored in a local SQLite database and displayed in real-time.
 
-## install
+## Installation
 
+1. Install the Python client via `pip install tviz`
+2. Clone and run the dashboard:
 ```bash
-pip install tviz
+git clone https://github.com/sdan/tviz.git
+cd tviz && bun install && bun dev
 ```
+3. Open http://localhost:3003 to view your runs.
 
-## usage
+Data is stored in `~/.tviz/tviz.db` by default.
+
+## Usage
 
 ```python
 from tviz import TvizLogger
@@ -21,10 +27,10 @@ logger = TvizLogger(run_name="gsm8k_grpo")
 logger.log_hparams({"model": "llama-3.2-1b", "lr": 1e-4})
 
 for step in range(100):
-    # your tinker training loop
+    # Your Tinker training loop
     trajectory_groups = rollout(...)
 
-    # log to tviz
+    # Log to tviz
     rollouts = from_tinker_batch(trajectory_groups, tokenizer=tokenizer)
     logger.log_rollouts(rollouts, step=step)
     logger.log_metrics({"reward": avg_reward, "loss": loss}, step=step)
@@ -32,33 +38,24 @@ for step in range(100):
 logger.close()
 ```
 
-## run the dashboard
+## Examples
 
-```bash
-git clone https://github.com/sdan/tviz.git
-cd tviz && bun install && bun dev
-```
+We include several examples in the [`examples/`](./examples) folder:
 
-open http://localhost:3003 to view your runs.
+1. **[Quickstart](examples/quickstart.py)**: Pig Latin SFT with minimal tviz integration.
+2. **[GSM8K RL](examples/gsm8k_rl.py)**: Math reasoning with GRPO.
+3. **[RL Loop](examples/rl_loop.py)**: Generic RL loop with rollout logging.
 
-data is stored in `~/.tviz/tviz.db` by default.
-
-## examples
-
+To run an example:
 ```bash
 export TINKER_API_KEY=your-api-key
 python examples/quickstart.py
 ```
 
-check out [`examples/`](./examples) for complete scripts:
-- `quickstart.py` - pig latin SFT, minimal tviz integration
-- `gsm8k_rl.py` - math reasoning with GRPO
-- `rl_loop.py` - generic RL loop with rollout logging
+## Documentation
 
-## docs
+For the full API reference and guides, visit [tviz.sdan.io/docs](https://tviz.sdan.io/docs).
 
-full API reference and guides: [tviz.sdan.io/docs](https://tviz.sdan.io/docs)
-
-## license
+## License
 
 MIT
