@@ -37,7 +37,7 @@ class TvizLogger:
         modality: str = "text",
     ):
         env_db_path = os.environ.get("TVIZ_DB_PATH")
-        default_db_path = Path.cwd() / "data" / "tviz.db"
+        default_db_path = Path.home() / ".tviz" / "tviz.db"
         chosen_path = db_path or env_db_path or str(default_db_path)
         self.db_path = Path(chosen_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
