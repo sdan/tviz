@@ -15,7 +15,7 @@ cd tviz && bun install && bun dev
 ```
 3. Open http://localhost:3003 to view your runs.
 
-Data is stored in `~/.tviz/tviz.db` by default.
+Data is stored in `./data/tviz.db` by default. Override with `TVIZ_DB_PATH`.
 
 ## Usage
 
