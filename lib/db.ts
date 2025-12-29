@@ -4,9 +4,18 @@ import os from "os";
 
 // Default: ~/.tviz/tviz.db
 // Vercel: set TVIZ_DB_PATH=__dirname to use bundled demo
-const DB_PATH = process.env.TVIZ_DB_PATH === "__dirname"
-  ? path.resolve(__dirname, "..", "data", "tviz_demo.db")
-  : (process.env.TVIZ_DB_PATH || path.join(os.homedir(), ".tviz", "tviz.db"));
+function resolveDbPath(): string {
+  if (process.env.TVIZ_DB_PATH === "__dirname") {
+    return path.resolve(__dirname, "..", "data", "tviz_demo.db");
+  }
+  return process.env.TVIZ_DB_PATH || path.join(os.homedir(), ".tviz", "tviz.db");
+}
+
+const DB_PATH = resolveDbPath();
+
+export function getDbPath() {
+  return DB_PATH;
+}
 
 export function getDb() {
   return new Database(DB_PATH, { readonly: true });
