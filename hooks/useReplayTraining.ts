@@ -1,83 +1,52 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { Step, RolloutWithTrajectories } from "@/lib/db";
 
 export function useReplayTraining(runId: string | null) {
   const [steps, setSteps] = useState<Step[]>([]);
   const [rollouts, setRollouts] = useState<RolloutWithTrajectories[]>([]);
   const [isReplaying, setIsReplaying] = useState(false);
-  const [replayProgress, setReplayProgress] = useState(0);
-  const [totalSteps, setTotalSteps] = useState(0);
-  const seenRolloutIdsRef = useRef<Set<number>>(new Set());
+  const [isLoading, setIsLoading] = useState(false);
 
-  const startReplay = useCallback(
-    (delay: number = 800) => {
-      if (!runId || isReplaying) return;
+  // Load data on mount or when runId changes
+  useEffect(() => {
+    if (!runId) return;
 
-      setIsReplaying(true);
-      setSteps([]);
-      setRollouts([]);
-      setReplayProgress(0);
-      seenRolloutIdsRef.current = new Set();
+    setIsLoading(true);
+    fetch(`/api/runs/${runId}`)
+      .then(res => res.json())
+      .then(data => {
+        setSteps(data.steps || []);
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, [runId]);
 
-      const eventSource = new EventSource(
-        `/api/replay/stream?run_id=${runId}&delay=${delay}`
-      );
+  const startReplay = useCallback(async () => {
+    if (!runId) return;
+    setIsReplaying(true);
 
-      eventSource.onmessage = (event) => {
-        const { type, data, total_steps, message } = JSON.parse(event.data);
-
-        if (type === "replay_start") {
-          setTotalSteps(total_steps);
-        } else if (type === "steps") {
-          setSteps(data);
-          setReplayProgress(data.length);
-        } else if (type === "rollouts") {
-          setRollouts((prev) => {
-            const next = [...prev];
-            const seen = seenRolloutIdsRef.current;
-            for (const rollout of data as RolloutWithTrajectories[]) {
-              if (!seen.has(rollout.id)) {
-                next.push(rollout);
-                seen.add(rollout.id);
-              }
-            }
-            return next;
-          });
-        } else if (type === "replay_end") {
-          setIsReplaying(false);
-          eventSource.close();
-        } else if (type === "error") {
-          console.error("Replay error:", message);
-          setIsReplaying(false);
-          eventSource.close();
-        }
-      };
-
-      eventSource.onerror = () => {
-        setIsReplaying(false);
-        eventSource.close();
-      };
-
-      return () => {
-        eventSource.close();
-        setIsReplaying(false);
-      };
-    },
-    [runId, isReplaying]
-  );
+    // Load all rollouts when replay is clicked
+    try {
+      const res = await fetch(`/api/runs/${runId}/rollouts?limit=1000`);
+      const data = await res.json();
+      setRollouts(data.rollouts || []);
+    } catch (e) {
+      console.error("Error loading rollouts:", e);
+    }
+  }, [runId]);
 
   const stopReplay = useCallback(() => {
     setIsReplaying(false);
+    setRollouts([]);
   }, []);
 
   return {
     steps,
     rollouts,
     isReplaying,
-    replayProgress,
-    totalSteps,
+    isLoading,
     startReplay,
     stopReplay,
   };

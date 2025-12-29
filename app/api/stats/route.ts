@@ -39,7 +39,7 @@ export async function GET() {
       if (run.config) {
         try {
           const config = JSON.parse(run.config);
-          model = config.model || config.base_model || "Unknown";
+          model = config.model || config.model_name || config.base_model || "Unknown";
           // Shorten model name
           if (model.includes("/")) {
             model = model.split("/").pop() || model;
@@ -81,7 +81,7 @@ export async function GET() {
       if (row.config) {
         try {
           const config = JSON.parse(row.config);
-          model = config.model || config.base_model || "Unknown";
+          model = config.model || config.model_name || config.base_model || "Unknown";
           if (model.includes("/")) {
             model = model.split("/").pop() || model;
           }

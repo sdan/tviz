@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tviz logo</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+    }
+
+    .container {
+      width: 1280px;
+      height: 640px;
+      position: relative;
+      background: #fff;
+    }
+
+    .grid {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: grid;
+      grid-template-columns: repeat(20, 28px);
+      grid-template-rows: repeat(10, 28px);
+      gap: 3px;
+    }
+
+    .cell {
+      width: 28px;
+      height: 28px;
+      background: #000;
+    }
+
+    .block {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+    }
+
+    .magenta { background: #ff00ff; }
+    .yellow { background: #ffff00; }
+    .blue { background: #0066ff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Color blocks scattered across container -->
+    <div class="block yellow" style="top: 30px; left: 50px;"></div>
+    <div class="block blue" style="top: 40px; left: 280px;"></div>
+    <div class="block magenta" style="top: 25px; left: 520px;"></div>
+    <div class="block yellow" style="top: 50px; left: 780px;"></div>
+    <div class="block blue" style="top: 35px; left: 1000px;"></div>
+    <div class="block magenta" style="top: 45px; left: 1200px;"></div>
+
+    <div class="block magenta" style="top: 120px; left: 90px;"></div>
+    <div class="block yellow" style="top: 150px; left: 350px;"></div>
+    <div class="block blue" style="top: 130px; left: 900px;"></div>
+    <div class="block magenta" style="top: 140px; left: 1150px;"></div>
+
+    <div class="block blue" style="top: 250px; left: 40px;"></div>
+    <div class="block yellow" style="top: 280px; left: 200px;"></div>
+    <div class="block magenta" style="top: 260px; left: 1050px;"></div>
+    <div class="block blue" style="top: 240px; left: 1220px;"></div>
+
+    <div class="block yellow" style="top: 350px; left: 70px;"></div>
+    <div class="block magenta" style="top: 380px; left: 250px;"></div>
+    <div class="block blue" style="top: 360px; left: 1000px;"></div>
+    <div class="block yellow" style="top: 340px; left: 1180px;"></div>
+
+    <div class="block blue" style="top: 450px; left: 100px;"></div>
+    <div class="block yellow" style="top: 480px; left: 300px;"></div>
+    <div class="block magenta" style="top: 460px; left: 950px;"></div>
+    <div class="block blue" style="top: 440px; left: 1150px;"></div>
+
+    <div class="block magenta" style="top: 550px; left: 60px;"></div>
+    <div class="block blue" style="top: 570px; left: 220px;"></div>
+    <div class="block yellow" style="top: 560px; left: 480px;"></div>
+    <div class="block magenta" style="top: 540px; left: 750px;"></div>
+    <div class="block yellow" style="top: 580px; left: 1020px;"></div>
+    <div class="block blue" style="top: 550px; left: 1200px;"></div>
+
+    <!-- TVIZ letters grid -->
+    <div class="grid">
+      <!-- T (cols 3-5) -->
+      <div class="cell" style="grid-area: 2 / 3;"></div>
+      <div class="cell" style="grid-area: 2 / 4;"></div>
+      <div class="cell" style="grid-area: 2 / 5;"></div>
+      <div class="cell" style="grid-area: 3 / 4;"></div>
+      <div class="cell" style="grid-area: 4 / 4;"></div>
+      <div class="cell" style="grid-area: 5 / 4;"></div>
+
+      <!-- V (cols 7-9) -->
+      <div class="cell" style="grid-area: 3 / 7;"></div>
+      <div class="cell" style="grid-area: 3 / 9;"></div>
+      <div class="cell" style="grid-area: 4 / 7;"></div>
+      <div class="cell" style="grid-area: 4 / 9;"></div>
+      <div class="cell" style="grid-area: 5 / 8;"></div>
+      <div class="cell" style="grid-area: 6 / 8;"></div>
+
+      <!-- i (col 12) - simple bar -->
+      <div class="cell" style="grid-area: 5 / 12;"></div>
+      <div class="cell" style="grid-area: 6 / 12;"></div>
+      <div class="cell" style="grid-area: 7 / 12;"></div>
+      <div class="cell" style="grid-area: 8 / 12;"></div>
+
+      <!-- Z (cols 15-17) -->
+      <div class="cell" style="grid-area: 6 / 15;"></div>
+      <div class="cell" style="grid-area: 6 / 16;"></div>
+      <div class="cell" style="grid-area: 6 / 17;"></div>
+      <div class="cell" style="grid-area: 7 / 16;"></div>
+      <div class="cell" style="grid-area: 8 / 15;"></div>
+      <div class="cell" style="grid-area: 9 / 15;"></div>
+      <div class="cell" style="grid-area: 9 / 16;"></div>
+      <div class="cell" style="grid-area: 9 / 17;"></div>
+    </div>
+  </div>
+
+  <button id="download" style="position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; background: #000; color: #fff; border: none; cursor: pointer; font-family: -apple-system, sans-serif; font-size: 14px;">
+    Download PNG
+  </button>
+
+  <script>
+    document.getElementById('download').addEventListener('click', async () => {
+      const grid = document.querySelector('.container');
+      const canvas = await html2canvas(grid, { backgroundColor: '#ffffff', scale: 1 });
+      const link = document.createElement('a');
+      link.download = 'tviz-logo.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+  </script>
+</body>
+</html>

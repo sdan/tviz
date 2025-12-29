@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tviz"
-version = "0.2.0"
-description = "Tinker Training Visualization - modality-agnostic RL training visualization"
+version = "0.2.2"
+description = "tviz is a visualization dashboard for the Tinker API"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -38,6 +38,20 @@ Repository = "https://github.com/sdan/tviz"
 
 [tool.hatch.build.targets.wheel]
 packages = ["tviz"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "data/",
+    "examples/",
+    "node_modules/",
+    ".next/",
+    "app/",
+    "components/",
+    "hooks/",
+    "lib/",
+    "public/",
+    "*.db",
+]
 
 [tool.ruff]
 line-length = 100

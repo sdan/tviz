@@ -16,8 +16,7 @@ import dynamic from "next/dynamic";
 // @ts-expect-error - pigeon-maps types are incompatible with next/dynamic
 const PigeonMap = dynamic(() => import("pigeon-maps").then((mod) => mod.Map), { ssr: false });
 const PigeonMarker = dynamic(() => import("pigeon-maps").then((mod) => mod.Marker), { ssr: false });
-import { useLiveTraining } from "@/hooks/useLiveTraining";
-import { useReplayTraining } from "@/hooks/useReplayTraining";
+import { useRunData } from "@/hooks/useRunData";
 import { TextRolloutView } from "@/lib/plugins/text/TextRolloutView";
 import { Button } from "@/components/ui/button";
 import {
@@ -115,10 +114,14 @@ function parseStepRewards(raw: string | null): RewardBreakdownItem[] {
   return [];
 }
 
-// Convert filesystem path to API route for serving images
+// Convert image path to URL
 function getImageUrl(imagePath: string | null): string {
   if (!imagePath) return "";
-  // Encode the path and serve through API
+  // If path starts with /images/, serve directly from public
+  if (imagePath.startsWith("/images/")) {
+    return imagePath;
+  }
+  // Otherwise route through API for local filesystem paths
   const encoded = encodeURIComponent(imagePath);
   return `/api/images/${encoded}`;
 }
@@ -511,14 +514,21 @@ function StepSection({
   step,
   rollouts,
   onOpenModal,
-  defaultExpanded = false,
+  forceCollapsed,
 }: {
   step: number;
   rollouts: RolloutWithTrajectories[];
   onOpenModal: (rollout: RolloutWithTrajectories) => void;
-  defaultExpanded?: boolean;
+  forceCollapsed?: boolean;
 }) {
-  const [isCollapsed, setIsCollapsed] = useState(!defaultExpanded);
+  const [isCollapsed, setIsCollapsed] = useState(forceCollapsed ?? true);
+
+  // Sync with parent's forceCollapsed state
+  useEffect(() => {
+    if (forceCollapsed !== undefined) {
+      setIsCollapsed(forceCollapsed);
+    }
+  }, [forceCollapsed]);
 
   // Compute step-level stats
   const allTrajectories = rollouts.flatMap(r => r.trajectories);
@@ -588,33 +598,43 @@ export default function TrainingRunPage() {
   const params = useParams();
   const runId = params.runId as string;
   const decodedRunId = decodeURIComponent(runId);
-  const [run, setRun] = useState<Run | null>(null);
   const [selectedRollout, setSelectedRollout] = useState<RolloutWithTrajectories | null>(null);
-  const [isReplayMode, setIsReplayMode] = useState(false);
-  const [storedRollouts, setStoredRollouts] = useState<RolloutWithTrajectories[]>([]);
+  const [allCollapsed, setAllCollapsed] = useState(true);
 
-  const live = useLiveTraining(decodedRunId);
-  const replay = useReplayTraining(decodedRunId);
+  const {
+    run,
+    steps,
+    rollouts,
+    isLoading,
+    isReplaying,
+    replayStep,
+    startReplay,
+    stopReplay,
+  } = useRunData(decodedRunId);
 
-  const steps = isReplayMode ? replay.steps : live.steps;
-  const rollouts = isReplayMode ? replay.rollouts : (storedRollouts.length > 0 ? storedRollouts : live.rollouts);
-  const connected = isReplayMode ? replay.isReplaying : live.connected;
-
-  // Group rollouts by step
+  // Group rollouts by step (filter by replayStep during replay)
   const rolloutsByStep = useMemo(() => {
+    const filteredRollouts = replayStep >= 0
+      ? rollouts.filter((r) => r.step <= replayStep)
+      : rollouts;
+
     const grouped = new Map<number, RolloutWithTrajectories[]>();
-    for (const r of rollouts) {
+    for (const r of filteredRollouts) {
       const existing = grouped.get(r.step) || [];
       existing.push(r);
       grouped.set(r.step, existing);
     }
     return Array.from(grouped.entries())
       .sort((a, b) => b[0] - a[0]); // Latest step first
-  }, [rollouts]);
+  }, [rollouts, replayStep]);
 
-  // Compute chart data with reward spread
+  // Compute chart data with reward spread (filter by replayStep during replay)
   const chartData = useMemo(() => {
-    return steps.map((s) => {
+    const filteredSteps = replayStep >= 0
+      ? steps.filter((s) => s.step <= replayStep)
+      : steps;
+
+    return filteredSteps.map((s) => {
       const stepRollouts = rollouts.filter(r => r.step === s.step);
       const allTrajs = stepRollouts.flatMap(r => r.trajectories);
       const rewards = allTrajs.map(t => t.reward);
@@ -632,7 +652,7 @@ export default function TrainingRunPage() {
         avgOutputLen,
       };
     });
-  }, [steps, rollouts]);
+  }, [steps, rollouts, replayStep]);
 
   // Compute summary stats
   const summaryStats = useMemo(() => {
@@ -642,42 +662,22 @@ export default function TrainingRunPage() {
     return { totalTokens, totalTrajectories };
   }, [rollouts]);
 
-  useEffect(() => {
-    fetch(`/api/runs/${decodedRunId}`)
-      .then((r) => r.json())
-      .then((d) => setRun(d.run))
-      .catch(() => {});
-  }, [decodedRunId]);
-
-  useEffect(() => {
-    setStoredRollouts([]);
-  }, [decodedRunId]);
-
-  useEffect(() => {
-    if (isReplayMode) return;
-    if (!run?.ended_at) return;
-    if (storedRollouts.length > 0) return;
-
-    fetch(`/api/runs/${decodedRunId}/rollouts`)
-      .then((r) => r.json())
-      .then((d) => setStoredRollouts(d.rollouts || []))
-      .catch(() => {});
-  }, [decodedRunId, isReplayMode, run?.ended_at, storedRollouts.length]);
-
-  useEffect(() => {
-    if (isReplayMode) return;
-    const interval = setInterval(() => {
-      fetch(`/api/runs/${decodedRunId}`)
-        .then((r) => r.json())
-        .then((d) => setRun(d.run))
-        .catch(() => {});
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [decodedRunId, isReplayMode]);
 
   const config = run?.config ? JSON.parse(run.config) : {};
   const latest = steps[steps.length - 1];
   const isEnded = !!run?.ended_at;
+
+  if (isLoading) {
+    return (
+      <div className="p-4 max-w-[1400px] mx-auto">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="h-64 bg-muted rounded"></div>
+          <div className="h-96 bg-muted rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 space-y-4 max-w-[1400px] mx-auto">
@@ -685,28 +685,28 @@ export default function TrainingRunPage() {
       <header className="flex items-center justify-between pb-3 border-b border-border">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-semibold font-mono">{decodedRunId}</h1>
-          <Badge variant={isEnded ? "secondary" : connected ? "green" : "destructive"}>
-            {isReplayMode
-              ? (replay.isReplaying ? "Replaying" : "Done")
-              : (isEnded ? "Ended" : (connected ? "Live" : "Disconnected"))}
+          <Badge variant={isEnded ? "secondary" : "green"}>
+            {isEnded ? "Ended" : "Live"}
           </Badge>
           {run?.type && <Badge variant="outline" className="text-xs uppercase">{run.type}</Badge>}
           {run?.modality && <Badge variant="secondary" className="text-xs uppercase">{run.modality}</Badge>}
         </div>
 
         <div className="flex items-center gap-4">
-          {!isReplayMode ? (
-            <Button variant="primary" size="sm" onClick={() => { setIsReplayMode(true); replay.startReplay(200); }}>
-              ▶ Replay run
+          {isReplaying ? (
+            <Button variant="danger" size="sm" onClick={stopReplay}>
+              ■ Stop replay
             </Button>
           ) : (
-            <Button variant="danger" size="sm" onClick={() => { setIsReplayMode(false); replay.stopReplay(); }}>
-              ■ Stop replay
+            <Button variant="primary" size="sm" onClick={startReplay} disabled={isLoading || steps.length === 0}>
+              ▶ Replay run
             </Button>
           )}
           {latest && (
             <div className="text-right">
-              <div className="font-mono font-bold">Step {latest.step}</div>
+              <div className="font-mono font-bold">
+                {isReplaying ? `Step ${replayStep}` : `Step ${latest.step}`}
+              </div>
               <div className="text-xs text-muted-foreground">
                 reward: {latest.reward_mean?.toFixed(3)} · {summaryStats.totalTrajectories.toLocaleString()} trajs · {summaryStats.totalTokens.toLocaleString()} tokens
               </div>
@@ -718,12 +718,21 @@ export default function TrainingRunPage() {
       {/* Compact Config */}
       {Object.keys(config).length > 0 && (
         <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm py-2 px-3 bg-muted/30 rounded-lg">
-          {Object.entries(config).map(([k, v]) => (
-            <div key={k}>
-              <span className="text-muted-foreground">{k}:</span>
-              <span className="font-mono ml-1">{String(v)}</span>
-            </div>
-          ))}
+          {Object.entries(config)
+            .filter(([k]) => {
+              // Only show essential config keys
+              const essentialKeys = [
+                "model_name", "model", "env_type", "batch_size", "group_size",
+                "learning_rate", "lr", "max_steps", "max_tokens", "task", "hf_repo"
+              ];
+              return essentialKeys.includes(k) || essentialKeys.includes(k.replace("X_", ""));
+            })
+            .map(([k, v]) => (
+              <div key={k}>
+                <span className="text-muted-foreground">{k.replace("X_", "")}:</span>
+                <span className="font-mono ml-1">{String(v)}</span>
+              </div>
+            ))}
         </div>
       )}
 
@@ -848,28 +857,38 @@ export default function TrainingRunPage() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Groups by Step</h2>
-          <span className="text-sm text-muted-foreground">
-            {formatCount(rolloutsByStep.length, "step")} · {formatCount(rollouts.length, "group")}
-          </span>
+          <div className="flex items-center gap-4">
+            {rolloutsByStep.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAllCollapsed(!allCollapsed)}
+                className="text-xs"
+              >
+                {allCollapsed ? "▼ Expand All" : "▲ Collapse All"}
+              </Button>
+            )}
+            <span className="text-sm text-muted-foreground">
+              {formatCount(rolloutsByStep.length, "step")} · {formatCount(rollouts.length, "group")}
+            </span>
+          </div>
         </div>
 
         {rolloutsByStep.length > 0 ? (
           <div className="space-y-2">
-            {rolloutsByStep.map(([step, stepRollouts], idx) => (
+            {rolloutsByStep.map(([step, stepRollouts]) => (
               <StepSection
                 key={step}
                 step={step}
                 rollouts={stepRollouts}
                 onOpenModal={setSelectedRollout}
-                defaultExpanded={idx === 0}
+                forceCollapsed={allCollapsed}
               />
             ))}
           </div>
         ) : (
           <Card className="p-8 text-center text-muted-foreground">
-            {isEnded && !isReplayMode
-              ? "Run ended - no group data"
-              : (connected ? "Waiting for training data..." : "Not connected")}
+            {isReplaying ? "Replaying..." : "No rollout data available"}
           </Card>
         )}
       </div>

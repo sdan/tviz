@@ -52,13 +52,24 @@ interface NavItemConfig {
   href: string;
   icon: keyof typeof Icons;
   external?: boolean;
+  children?: { label: string; href: string }[];
 }
 
 const navItems: NavItemConfig[] = [
   { label: "Overview", href: "/", icon: "usage" },
   { label: "Training Runs", href: "/training-runs", icon: "training" },
+  {
+    label: "Docs",
+    href: "/docs",
+    icon: "docs",
+    children: [
+      { label: "Getting Started", href: "/docs/getting-started" },
+      { label: "Examples", href: "/docs/examples" },
+      { label: "API Reference", href: "/docs/api" },
+      { label: "Tinker Integration", href: "/docs/tinker" },
+    ],
+  },
   { label: "Tinker Console", href: "https://tinker-console.thinkingmachines.ai/", icon: "robot", external: true },
-  { label: "Docs", href: "https://tinker-docs.thinkingmachines.ai/", icon: "docs", external: true },
 ];
 
 export function Sidebar() {
@@ -67,8 +78,11 @@ export function Sidebar() {
   // Determine active item from URL
   const getIsActive = (href: string) => {
     if (href === "/") return pathname === "/";
-    return pathname.startsWith(href);
+    return pathname === href;
   };
+
+  // Check if we're in docs section
+  const isInDocs = pathname.startsWith("/docs");
 
   return (
     <aside
@@ -78,21 +92,16 @@ export function Sidebar() {
     >
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2 px-4 py-4 border-b border-border hover:bg-sidebar-accent/50 transition-colors">
-        <div className="w-8 h-8 rounded-md bg-foreground/10 flex items-center justify-center">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" />
-            <path d="M2 17l10 5 10-5" />
-            <path d="M2 12l10 5 10-5" />
-          </svg>
-        </div>
-        <span className="font-medium">tviz</span>
+        <img src="/tviz-logo.png" alt="tviz" className="h-8 w-auto" />
       </Link>
 
       {/* Navigation */}
-      <nav className="flex-1 py-2">
+      <nav className="flex-1 py-2 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = Icons[item.icon];
           const isActive = getIsActive(item.href);
+          const hasChildren = item.children && item.children.length > 0;
+          const isExpanded = hasChildren && isInDocs;
 
           // External links
           if (item.external) {
@@ -116,7 +125,46 @@ export function Sidebar() {
             );
           }
 
-          // Internal links - use Next.js Link
+          // Items with children (Docs)
+          if (hasChildren) {
+            return (
+              <div key={item.href}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 w-full px-4 py-2 text-sm transition-colors",
+                    isInDocs
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                  )}
+                >
+                  <Icon />
+                  <span>{item.label}</span>
+                </Link>
+                {/* Sub-items */}
+                {isExpanded && (
+                  <div className="ml-4 border-l border-border">
+                    {item.children!.map((child) => (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        className={cn(
+                          "flex items-center gap-3 w-full pl-6 pr-4 py-1.5 text-sm transition-colors",
+                          pathname === child.href
+                            ? "text-sidebar-accent-foreground font-medium"
+                            : "text-muted-foreground hover:text-sidebar-foreground"
+                        )}
+                      >
+                        <span>{child.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // Regular internal links
           return (
             <Link
               key={item.href}
@@ -139,10 +187,6 @@ export function Sidebar() {
       <div className="px-4 py-4 text-center text-xs text-muted-foreground leading-relaxed">
         <a href="https://github.com/sdan/tviz" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
           Open source
-        </a>
-        {" · "}
-        <a href="https://github.com/sdan/tviz" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
-          Docs
         </a>
       </div>
     </aside>

@@ -11,55 +11,84 @@ tviz is a local dashboard for visualizing RL training runs. Similar to wandb, yo
 pip install tviz
 ```
 
-## Usage
+## Quick Start
 
 ```python
 from tviz import TvizLogger
 
-logger = TvizLogger(run_name="math_rl")
-logger.log_hparams(config)
+logger = TvizLogger(run_name="gsm8k_rl")
+logger.log_hparams({"model": "llama-3.2-1b", "lr": 1e-4})
+print(f"View at: {logger.get_logger_url()}")
 
-for step in range(1000):
+for step in range(100):
+    # ... training code ...
     logger.log_metrics({"reward": 0.5, "loss": 0.1}, step=step)
     logger.log_rollouts(rollouts, step=step)
 
 logger.close()
 ```
 
-### With Tinker Cookbook
-
-```python
-from tinker_cookbook.utils.ml_log import setup_logging
-from tviz import TvizLogger
-from tviz.adapters.tinker import from_tinker_batch
-
-# Add TvizLogger to the multiplex logger
-ml_logger = setup_logging(log_dir, wandb_project="my_project", config=config)
-tviz_logger = TvizLogger(run_name="math_rl")
-ml_logger.loggers.append(tviz_logger)
-
-# In training loop - after rollouts:
-rollouts = from_tinker_batch(trajectory_groups_P, tokenizer=tokenizer)
-tviz_logger.log_rollouts(rollouts, step=i_batch)
-
-# Metrics are logged automatically via multiplex
-ml_logger.log_metrics(metrics, step=i_batch)
-```
-
 ## Dashboard
 
 ```bash
+git clone https://github.com/sdan/tviz.git
 cd tviz && bun install && bun dev
 ```
 
 Open `http://localhost:3003` to view training runs.
 
-By default, tviz stores data in `~/.tviz/tviz.db`. You can override this
-with `TVIZ_DB_PATH`.
+By default, tviz stores data in `~/.tviz/tviz.db`. Override with `TVIZ_DB_PATH`.
+
+## API Reference
+
+### TvizLogger
+
+```python
+TvizLogger(
+    db_path: str | None = None,    # Path to SQLite db (default: ~/.tviz/tviz.db)
+    run_name: str | None = None,   # Human-readable run name
+    modality: str = "text"         # "text" or "vision"
+)
+```
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `log_hparams(config)` | Log hyperparameters dict |
+| `log_metrics(metrics, step)` | Log scalar metrics for a step |
+| `log_rollouts(rollouts, step)` | Log trajectory rollouts |
+| `get_logger_url()` | Get dashboard URL for this run |
+| `close()` | Mark run complete, close connection |
+
+### Rollout Format
+
+```python
+logger.log_rollouts([
+    {
+        "group_idx": 0,
+        "prompt_text": "What is 2+2?",
+        "trajectories": [
+            {"trajectory_idx": 0, "reward": 1.0, "output_text": "4"},
+            {"trajectory_idx": 1, "reward": 0.0, "output_text": "5"},
+        ],
+    }
+], step=100)
+```
+
+## Tinker Integration
+
+```python
+from tviz.adapters.tinker import from_tinker_batch
+
+# After rollouts:
+rollouts = from_tinker_batch(trajectory_groups_P, tokenizer=tokenizer)
+logger.log_rollouts(rollouts, step=i_batch)
+```
 
 ## Modalities
 
-- **text**: LLM RL (math_rl, code_rl, chat_sl)
+- **text**: LLM RL (math, code, chat)
 - **vision**: VLM tasks with images and maps
 
 ## License
