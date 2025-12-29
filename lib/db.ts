@@ -1,8 +1,8 @@
 import Database from "better-sqlite3";
 import path from "path";
 
-// Default to ./data/tviz.db in project, override with TVIZ_DB_PATH
-const DB_PATH = process.env.TVIZ_DB_PATH || path.join(process.cwd(), "data", "tviz.db");
+// Resolve from this file's location (lib/) -> project root -> data/tviz.db
+const DB_PATH = process.env.TVIZ_DB_PATH || path.resolve(__dirname, "..", "data", "tviz.db");
 
 export function getDb() {
   return new Database(DB_PATH, { readonly: true });
