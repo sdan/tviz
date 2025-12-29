@@ -1,8 +1,14 @@
 import Database from "better-sqlite3";
 import path from "path";
 
-// Resolve from this file's location (lib/) -> project root -> data/tviz.db
-const DB_PATH = process.env.TVIZ_DB_PATH || path.resolve(__dirname, "..", "data", "tviz.db");
+// Default: ~/.tviz/tviz.db, fallback to bundled demo db for Vercel
+const homePath = require("os").homedir();
+const defaultPath = path.join(homePath, ".tviz", "tviz.db");
+const demoPath = path.resolve(__dirname, "..", "data", "tviz_demo.db");
+
+// Use env var > home dir > demo db
+const DB_PATH = process.env.TVIZ_DB_PATH ||
+  (require("fs").existsSync(defaultPath) ? defaultPath : demoPath);
 
 export function getDb() {
   return new Database(DB_PATH, { readonly: true });

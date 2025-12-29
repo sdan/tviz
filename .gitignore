@@ -35,7 +35,7 @@ npm-debug.log*
 # Database
 *.db
 *.sqlite
-!data/tviz.db
+!data/tviz_demo.db
 
 # Testing
 .coverage
