@@ -3,9 +3,16 @@ import os from "os";
 import path from "path";
 
 const envDbPath = process.env.TVIZ_DB_PATH;
-const DB_PATH = envDbPath && envDbPath.length > 0
-  ? envDbPath
-  : path.join(os.homedir(), ".tviz", "tviz.db");
+
+function getDbPath(): string {
+  if (envDbPath && envDbPath.length > 0) {
+    // If relative path, resolve from cwd
+    return path.isAbsolute(envDbPath) ? envDbPath : path.join(process.cwd(), envDbPath);
+  }
+  return path.join(os.homedir(), ".tviz", "tviz.db");
+}
+
+const DB_PATH = getDbPath();
 
 export function getDb() {
   return new Database(DB_PATH, { readonly: true });
