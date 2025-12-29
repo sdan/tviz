@@ -3,8 +3,17 @@ import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "tviz | Tinker Training Visualization",
-  description: "Training visualization dashboard for Thinking Machines Tinker API",
+  title: "tviz | RL Training Visualization",
+  description: "Local dashboard for visualizing RL training runs",
+  openGraph: {
+    title: "tviz | RL Training Visualization",
+    description: "Local dashboard for visualizing RL training runs",
+    images: ["/screencap.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/screencap.png"],
+  },
 };
 
 export default function RootLayout({

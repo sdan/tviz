@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "tviz"
 version = "0.2.2"
-description = "tviz is a visualization dashboard for the Tinker API"
+description = "Local dashboard for visualizing RL training runs"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
