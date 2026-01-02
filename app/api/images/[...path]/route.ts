@@ -12,6 +12,11 @@ export async function GET(
     const { path: pathSegments } = await params;
     const relativePath = pathSegments.join("/");
 
+    // If it's a URL (http/https), redirect to it directly
+    if (relativePath.startsWith("http://") || relativePath.startsWith("https://")) {
+      return NextResponse.redirect(relativePath);
+    }
+
     // Resolve the full path - support both absolute and relative to ~/.tviz
     let fullPath: string;
     if (relativePath.startsWith("/")) {

@@ -18,6 +18,7 @@ const PigeonMap = dynamic(() => import("pigeon-maps").then((mod) => mod.Map), { 
 const PigeonMarker = dynamic(() => import("pigeon-maps").then((mod) => mod.Marker), { ssr: false });
 import { useRunData } from "@/hooks/useRunData";
 import { TextRolloutView } from "@/lib/plugins/text/TextRolloutView";
+import { TokenHeatmap } from "@/lib/plugins/text/TokenHeatmap";
 import { Button } from "@/components/ui/button";
 import {
   XAxis,
@@ -302,6 +303,7 @@ function VisionTrajectoryRow({
   onToggle: () => void;
   onSelect: () => void;
 }) {
+  const [showLogprobs, setShowLogprobs] = useState(false);
   const preview = trajectory.output_text?.slice(0, 100) || "(no output)";
   // [tviz extra] Geo-guessing distance - only shown when distance_km present
   const distanceText = trajectory.distance_km !== null && trajectory.distance_km !== undefined
@@ -310,6 +312,14 @@ function VisionTrajectoryRow({
       : `${trajectory.distance_km.toFixed(0)}km`
     : null;
   const rewardBreakdown = parseStepRewards(trajectory.step_rewards);
+
+  // Parse logprobs from JSON string if present
+  const logprobs = trajectory.logprobs ? (
+    typeof trajectory.logprobs === 'string'
+      ? JSON.parse(trajectory.logprobs)
+      : trajectory.logprobs
+  ) : null;
+  const hasLogprobs = logprobs && Array.isArray(logprobs) && logprobs.length > 0;
 
   return (
     <div
@@ -327,6 +337,9 @@ function VisionTrajectoryRow({
         {isVision && distanceText && (
           <span className="text-xs text-muted-foreground shrink-0">{distanceText}</span>
         )}
+        {hasLogprobs && (
+          <span className="text-xs text-muted-foreground/70 font-light tracking-wide shrink-0">{logprobs.length} tokens</span>
+        )}
         {!isExpanded && (
           <span className="text-muted-foreground font-mono text-xs truncate min-w-0">
             {preview}
@@ -334,11 +347,53 @@ function VisionTrajectoryRow({
         )}
       </div>
       <span className="absolute right-4 top-2 text-xs text-muted-foreground">{isExpanded ? "▲" : "▼"}</span>
-      {isExpanded && trajectory.output_text && (
-        <pre className="mt-2 text-xs font-mono bg-background border rounded p-2 whitespace-pre-wrap max-h-48 overflow-auto">
-          {trajectory.output_text}
-        </pre>
+
+      {isExpanded && (
+        <div className="mt-2 space-y-2">
+          {/* Logprobs toggle button */}
+          {hasLogprobs && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowLogprobs(!showLogprobs);
+              }}
+              className={`text-xs px-2 py-1 rounded border transition-colors ${
+                showLogprobs
+                  ? "bg-blue-500/20 border-blue-500/50 text-blue-400"
+                  : "bg-muted border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {showLogprobs ? "Hide Logprobs" : "Show Logprobs"}
+            </button>
+          )}
+
+          {/* Output content */}
+          {trajectory.output_text && (
+            <div className="text-xs font-mono bg-background border rounded p-2 whitespace-pre-wrap max-h-48 overflow-auto">
+              {showLogprobs && hasLogprobs ? (
+                <div className="space-y-2">
+                  {/* Color scale legend */}
+                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground/70 font-light tracking-wide border-b border-border/50 pb-2 mb-2">
+                    <span className="uppercase">Confidence</span>
+                    <div className="flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(239, 68, 68, 0.2)" }}>Low</span>
+                      <span className="px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(234, 179, 8, 0.2)" }}>Med</span>
+                      <span className="px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(34, 197, 94, 0.2)" }}>High</span>
+                    </div>
+                  </div>
+                  <TokenHeatmap
+                    text={trajectory.output_text}
+                    logprobs={logprobs}
+                  />
+                </div>
+              ) : (
+                trajectory.output_text
+              )}
+            </div>
+          )}
+        </div>
       )}
+
       {isExpanded && rewardBreakdown.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2 text-xs">
           {rewardBreakdown.map((item) => (
