@@ -5,8 +5,10 @@ import rehypePrettyCode from "rehype-pretty-code";
 const nextConfig = {
   reactStrictMode: true,
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
-  outputFileTracingIncludes: {
-    "/api/**/*": ["./lib/demo/tviz_demo.db"],
+  experimental: {
+    outputFileTracingIncludes: {
+      "/app/api/**/*": ["./tviz_demo.db"],
+    },
   },
 };
 
