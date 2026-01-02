@@ -18,7 +18,7 @@ export default function TrainingRunsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/runs")
+    fetch("/api/runs", { cache: "no-store" })
       .then((r) => r.json())
       .then(setRuns)
       .catch(() => {})

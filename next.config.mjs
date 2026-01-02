@@ -7,7 +7,7 @@ const nextConfig = {
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
   experimental: {
     outputFileTracingIncludes: {
-      "/app/api/**/*": ["./tviz_demo.db"],
+      "app/api/**/*": ["./tviz_demo.db"],
     },
   },
 };
