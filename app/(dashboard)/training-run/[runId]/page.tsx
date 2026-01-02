@@ -18,6 +18,7 @@ const PigeonMap = dynamic(() => import("pigeon-maps").then((mod) => mod.Map), { 
 const PigeonMarker = dynamic(() => import("pigeon-maps").then((mod) => mod.Marker), { ssr: false });
 import { useRunData } from "@/hooks/useRunData";
 import { TextRolloutView } from "@/lib/plugins/text/TextRolloutView";
+import { TokenHeatmap } from "@/lib/plugins/text/TokenHeatmap";
 import { Button } from "@/components/ui/button";
 import {
   XAxis,
@@ -142,6 +143,8 @@ function RolloutModal({
   const [idx, setIdx] = useState(0);
   const trajectory = rollout.trajectories[idx];
   const isVision = rollout.image_path !== null;
+  // [tviz extra] Geo-guessing specific - only show map/distance if coordinates present
+  const hasGeoData = rollout.gt_lat !== null && rollout.gt_lon !== null;
   const rewardBreakdown = parseStepRewards(trajectory?.step_rewards ?? null);
 
   // For text modality, use the TextRolloutView component
@@ -173,11 +176,12 @@ function RolloutModal({
   }
 
   // Vision modality
-  const mapCenter: [number, number] = trajectory?.pred_lat && trajectory?.pred_lon && rollout.gt_lat && rollout.gt_lon
-    ? [(rollout.gt_lat + trajectory.pred_lat) / 2, (rollout.gt_lon + trajectory.pred_lon) / 2]
-    : rollout.gt_lat && rollout.gt_lon
-      ? [rollout.gt_lat, rollout.gt_lon]
-      : [0, 0];
+  // [tviz extra] Geo-guessing map center calculation
+  const mapCenter: [number, number] = hasGeoData
+    ? (trajectory?.pred_lat && trajectory?.pred_lon
+        ? [(rollout.gt_lat! + trajectory.pred_lat) / 2, (rollout.gt_lon! + trajectory.pred_lon) / 2]
+        : [rollout.gt_lat!, rollout.gt_lon!])
+    : [0, 0];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -185,10 +189,14 @@ function RolloutModal({
         <DialogHeader>
           <DialogTitle>
             <div className="flex items-center gap-2">
+              {/* [tviz extra] Show location for geo-guessing, otherwise generic title */}
               <span className="font-semibold">
-                {rollout.gt_city || "Unknown"}, {rollout.gt_country || "Unknown"}
+                {hasGeoData
+                  ? `${rollout.gt_city || "Unknown"}, ${rollout.gt_country || "Unknown"}`
+                  : `Vision Rollout`}
               </span>
               <Badge variant="outline" className="text-xs">Step {rollout.step}</Badge>
+              <Badge variant="outline" className="text-xs">Group {rollout.group_idx}</Badge>
             </div>
           </DialogTitle>
         </DialogHeader>
@@ -215,10 +223,11 @@ function RolloutModal({
           </div>
 
           <div className="space-y-4">
-            {rollout.gt_lat && rollout.gt_lon && (
+            {/* [tviz extra] Geo-guessing map - only shown when coordinates present */}
+            {hasGeoData && (
               <div className="h-[280px] rounded-lg overflow-hidden border border-border">
                 <PigeonMap defaultCenter={mapCenter} defaultZoom={2} center={mapCenter} zoom={2} height={280}>
-                  <PigeonMarker anchor={[rollout.gt_lat, rollout.gt_lon]} color="#ff3b30" />
+                  <PigeonMarker anchor={[rollout.gt_lat!, rollout.gt_lon!]} color="#ff3b30" />
                   {rollout.trajectories
                     .filter((t) => t.pred_lat && t.pred_lon)
                     .map((t, i) => (
@@ -294,13 +303,23 @@ function VisionTrajectoryRow({
   onToggle: () => void;
   onSelect: () => void;
 }) {
+  const [showLogprobs, setShowLogprobs] = useState(false);
   const preview = trajectory.output_text?.slice(0, 100) || "(no output)";
+  // [tviz extra] Geo-guessing distance - only shown when distance_km present
   const distanceText = trajectory.distance_km !== null && trajectory.distance_km !== undefined
     ? trajectory.distance_km < 1
       ? `${(trajectory.distance_km * 1000).toFixed(0)}m`
       : `${trajectory.distance_km.toFixed(0)}km`
     : null;
   const rewardBreakdown = parseStepRewards(trajectory.step_rewards);
+
+  // Parse logprobs from JSON string if present
+  const logprobs = trajectory.logprobs ? (
+    typeof trajectory.logprobs === 'string'
+      ? JSON.parse(trajectory.logprobs)
+      : trajectory.logprobs
+  ) : null;
+  const hasLogprobs = logprobs && Array.isArray(logprobs) && logprobs.length > 0;
 
   return (
     <div
@@ -318,6 +337,9 @@ function VisionTrajectoryRow({
         {isVision && distanceText && (
           <span className="text-xs text-muted-foreground shrink-0">{distanceText}</span>
         )}
+        {hasLogprobs && (
+          <span className="text-xs text-muted-foreground/70 font-light tracking-wide shrink-0">{logprobs.length} tokens</span>
+        )}
         {!isExpanded && (
           <span className="text-muted-foreground font-mono text-xs truncate min-w-0">
             {preview}
@@ -325,11 +347,53 @@ function VisionTrajectoryRow({
         )}
       </div>
       <span className="absolute right-4 top-2 text-xs text-muted-foreground">{isExpanded ? "▲" : "▼"}</span>
-      {isExpanded && trajectory.output_text && (
-        <pre className="mt-2 text-xs font-mono bg-background border rounded p-2 whitespace-pre-wrap max-h-48 overflow-auto">
-          {trajectory.output_text}
-        </pre>
+
+      {isExpanded && (
+        <div className="mt-2 space-y-2">
+          {/* Logprobs toggle button */}
+          {hasLogprobs && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowLogprobs(!showLogprobs);
+              }}
+              className={`text-xs px-2 py-1 rounded border transition-colors ${
+                showLogprobs
+                  ? "bg-blue-500/20 border-blue-500/50 text-blue-400"
+                  : "bg-muted border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {showLogprobs ? "Hide Logprobs" : "Show Logprobs"}
+            </button>
+          )}
+
+          {/* Output content */}
+          {trajectory.output_text && (
+            <div className="text-xs font-mono bg-background border rounded p-2 whitespace-pre-wrap max-h-48 overflow-auto">
+              {showLogprobs && hasLogprobs ? (
+                <div className="space-y-2">
+                  {/* Color scale legend */}
+                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground/70 font-light tracking-wide border-b border-border/50 pb-2 mb-2">
+                    <span className="uppercase">Confidence</span>
+                    <div className="flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(239, 68, 68, 0.2)" }}>Low</span>
+                      <span className="px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(234, 179, 8, 0.2)" }}>Med</span>
+                      <span className="px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(34, 197, 94, 0.2)" }}>High</span>
+                    </div>
+                  </div>
+                  <TokenHeatmap
+                    text={trajectory.output_text}
+                    logprobs={logprobs}
+                  />
+                </div>
+              ) : (
+                trajectory.output_text
+              )}
+            </div>
+          )}
+        </div>
       )}
+
       {isExpanded && rewardBreakdown.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2 text-xs">
           {rewardBreakdown.map((item) => (
@@ -370,20 +434,22 @@ function RolloutRow({
   const meanReward = rollout.mean_reward ?? (sorted.reduce((s, t) => s + t.reward, 0) / sorted.length);
   const promptPreview = rollout.prompt_text?.slice(0, 60) || "(no prompt)";
   const isVision = rollout.image_path !== null;
-  const location = isVision
+  // [tviz extra] Geo-guessing specific
+  const hasGeoData = rollout.gt_lat !== null && rollout.gt_lon !== null;
+  const location = hasGeoData
     ? [rollout.gt_city, rollout.gt_country].filter(Boolean).join(", ") || "Unknown"
     : "";
   const selectedTraj = sorted[selectedTrajIdx] || sorted[0];
 
-  // Map center for vision modality
+  // [tviz extra] Geo-guessing map center
   const mapCenter: [number, number] = useMemo(() => {
-    if (!isVision || !rollout.gt_lat || !rollout.gt_lon) return [0, 0];
+    if (!hasGeoData) return [0, 0];
     const t = selectedTraj;
     if (t?.pred_lat && t?.pred_lon) {
-      return [(rollout.gt_lat + t.pred_lat) / 2, (rollout.gt_lon + t.pred_lon) / 2];
+      return [(rollout.gt_lat! + t.pred_lat) / 2, (rollout.gt_lon! + t.pred_lon) / 2];
     }
-    return [rollout.gt_lat, rollout.gt_lon];
-  }, [isVision, rollout, selectedTraj]);
+    return [rollout.gt_lat!, rollout.gt_lon!];
+  }, [hasGeoData, rollout, selectedTraj]);
 
   return (
     <div className="border border-border rounded-lg overflow-hidden">
@@ -424,7 +490,7 @@ function RolloutRow({
 
         {/* Prompt/Location preview */}
         <span className="text-xs text-muted-foreground truncate flex-1 font-mono">
-          {isVision ? `📍 ${location}` : promptPreview}
+          {isVision ? (hasGeoData ? `📍 ${location}` : "🖼️ Image") : promptPreview}
         </span>
 
         {/* Actions */}
@@ -437,7 +503,7 @@ function RolloutRow({
       {/* Expanded content */}
       {isExpanded && (
         <div className="border-t border-border">
-          {/* Vision: Image + Map header */}
+          {/* Vision: Image header (+ optional geo map) */}
           {isVision && getImageUrl && (
             <div className="flex gap-4 p-3 bg-muted/20 border-b border-border">
               {/* Image */}
@@ -445,41 +511,43 @@ function RolloutRow({
                 {rollout.image_path && (
                   <img
                     src={getImageUrl(rollout.image_path)}
-                    alt={location}
+                    alt={hasGeoData ? location : "Vision input"}
                     className="w-full h-full object-cover"
                   />
                 )}
               </div>
 
-              {/* Map */}
-              <div className="rounded-lg overflow-hidden bg-muted flex-shrink-0" style={{ width: 280, height: 140 }}>
-                {rollout.gt_lat && rollout.gt_lon && (
-                  <PigeonMap center={mapCenter} zoom={3} width={280} height={140}>
-                    <PigeonMarker anchor={[rollout.gt_lat, rollout.gt_lon]} color="#ef4444" />
-                    {sorted
-                      .filter(t => t.pred_lat && t.pred_lon)
-                      .map((t, i) => (
-                        <PigeonMarker
-                          key={t.id}
-                          anchor={[t.pred_lat!, t.pred_lon!]}
-                          color={i === selectedTrajIdx ? "#000" : rewardColor(t.reward)}
-                        />
-                      ))}
-                  </PigeonMap>
-                )}
-              </div>
+              {/* [tviz extra] Geo-guessing map - only shown when coordinates present */}
+              {hasGeoData && (
+                <>
+                  <div className="rounded-lg overflow-hidden bg-muted flex-shrink-0" style={{ width: 280, height: 140 }}>
+                    <PigeonMap center={mapCenter} zoom={3} width={280} height={140}>
+                      <PigeonMarker anchor={[rollout.gt_lat!, rollout.gt_lon!]} color="#ef4444" />
+                      {sorted
+                        .filter(t => t.pred_lat && t.pred_lon)
+                        .map((t, i) => (
+                          <PigeonMarker
+                            key={t.id}
+                            anchor={[t.pred_lat!, t.pred_lon!]}
+                            color={i === selectedTrajIdx ? "#000" : rewardColor(t.reward)}
+                          />
+                        ))}
+                    </PigeonMap>
+                  </div>
 
-              {/* Legend */}
-              <div className="text-xs text-muted-foreground space-y-1 pt-1">
-                <div className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-red-500" />
-                  <span>Ground truth</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-black" />
-                  <span>Selected</span>
-                </div>
-              </div>
+                  {/* Legend */}
+                  <div className="text-xs text-muted-foreground space-y-1 pt-1">
+                    <div className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                      <span>Ground truth</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-black" />
+                      <span>Selected</span>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 

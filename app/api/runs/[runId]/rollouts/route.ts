@@ -54,6 +54,7 @@ export async function GET(
           'reward', t.reward,
           'output_text', t.output_text,
           'output_tokens', t.output_tokens,
+          'logprobs', json(t.logprobs),
           'pred_lat', t.pred_lat,
           'pred_lon', t.pred_lon,
           'distance_km', t.distance_km,

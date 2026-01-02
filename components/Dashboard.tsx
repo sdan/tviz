@@ -132,7 +132,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/stats")
+    fetch("/api/stats", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         setStats(data);
@@ -416,21 +416,21 @@ logger.close()`}
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <CardTitle className="text-base font-medium">Recent Training Runs</CardTitle>
-              <CardDescription>View and manage your training runs</CardDescription>
+              <CardDescription className="hidden sm:block">View and manage your training runs</CardDescription>
             </div>
             <Link href="/training-runs" className="text-sm text-muted-foreground hover:text-foreground">
               View all →
             </Link>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Run</TableHead>
-                <TableHead>Model</TableHead>
+                <TableHead className="hidden sm:table-cell">Model</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Started</TableHead>
+                <TableHead className="hidden sm:table-cell">Started</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -441,7 +441,7 @@ logger.close()`}
                       {run.name || run.id}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                  <TableCell className="hidden sm:table-cell text-sm text-muted-foreground max-w-[200px] truncate">
                     {run.model}
                   </TableCell>
                   <TableCell>
@@ -449,7 +449,7 @@ logger.close()`}
                       {run.ended_at ? "completed" : "running"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
+                  <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
                     {formatDate(run.started_at)}
                   </TableCell>
                 </TableRow>

@@ -11,6 +11,7 @@ interface TokenHeatmapProps {
 /**
  * Displays text with token-level logprob coloring.
  * Green = high probability, Red = low probability.
+ * Tokens animate in with a staggered cascade effect.
  */
 export function TokenHeatmap({ text, logprobs, tokens }: TokenHeatmapProps) {
   // If no logprobs, just show plain text

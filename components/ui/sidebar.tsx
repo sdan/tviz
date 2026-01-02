@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,19 @@ const Icons = {
       <line x1="10" y1="14" x2="21" y2="3" />
     </svg>
   ),
+  menu: () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  ),
+  close: () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  ),
 };
 
 interface NavItemConfig {
@@ -74,6 +88,7 @@ const navItems: NavItemConfig[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
 
   // Determine active item from URL
   const getIsActive = (href: string) => {
@@ -84,14 +99,15 @@ export function Sidebar() {
   // Check if we're in docs section
   const isInDocs = pathname.startsWith("/docs");
 
-  return (
-    <aside
-      data-slot="sidebar"
-      className="flex flex-col h-screen w-[var(--sidebar-width)] border-r border-border bg-sidebar sticky top-0"
-      style={{ "--sidebar-width": "16rem" } as React.CSSProperties}
-    >
+  // Close sidebar when navigating on mobile
+  const handleNavClick = () => {
+    setIsOpen(false);
+  };
+
+  const sidebarContent = (
+    <>
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2 px-4 py-4 border-b border-border hover:bg-sidebar-accent/50 transition-colors">
+      <Link href="/" onClick={handleNavClick} className="flex items-center gap-2 px-4 py-4 border-b border-border hover:bg-sidebar-accent/50 transition-colors">
         <img src="/tviz-logo.png" alt="tviz" className="h-8 w-auto" />
       </Link>
 
@@ -111,6 +127,7 @@ export function Sidebar() {
                 href={item.href}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={handleNavClick}
                 className={cn(
                   "flex items-center gap-3 w-full px-4 py-2 text-sm transition-colors",
                   "text-sidebar-foreground hover:bg-sidebar-accent/50"
@@ -131,6 +148,7 @@ export function Sidebar() {
               <div key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={handleNavClick}
                   className={cn(
                     "flex items-center gap-3 w-full px-4 py-2 text-sm transition-colors",
                     isInDocs
@@ -148,6 +166,7 @@ export function Sidebar() {
                       <Link
                         key={child.href}
                         href={child.href}
+                        onClick={handleNavClick}
                         className={cn(
                           "flex items-center gap-3 w-full pl-6 pr-4 py-1.5 text-sm transition-colors",
                           pathname === child.href
@@ -169,6 +188,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={handleNavClick}
               className={cn(
                 "flex items-center gap-3 w-full px-4 py-2 text-sm transition-colors",
                 isActive
@@ -189,6 +209,52 @@ export function Sidebar() {
           Open source
         </a>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile header with hamburger */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-sidebar border-b border-border">
+        <Link href="/" className="flex items-center gap-2">
+          <img src="/tviz-logo.png" alt="tviz" className="h-7 w-auto" />
+        </Link>
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="p-2 text-sidebar-foreground hover:bg-sidebar-accent/50 rounded-md transition-colors"
+          aria-label={isOpen ? "Close menu" : "Open menu"}
+        >
+          {isOpen ? <Icons.close /> : <Icons.menu />}
+        </button>
+      </div>
+
+      {/* Mobile sidebar overlay */}
+      {isOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/50"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Mobile sidebar drawer */}
+      <aside
+        data-slot="sidebar-mobile"
+        className={cn(
+          "md:hidden fixed top-0 left-0 z-50 flex flex-col h-screen w-64 bg-sidebar border-r border-border transition-transform duration-200 ease-in-out",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {sidebarContent}
+      </aside>
+
+      {/* Desktop sidebar */}
+      <aside
+        data-slot="sidebar"
+        className="hidden md:flex flex-col h-screen w-[var(--sidebar-width)] border-r border-border bg-sidebar sticky top-0"
+        style={{ "--sidebar-width": "16rem" } as React.CSSProperties}
+      >
+        {sidebarContent}
+      </aside>
+    </>
   );
 }
